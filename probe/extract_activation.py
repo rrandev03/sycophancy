@@ -39,7 +39,7 @@ def extract_mha_activation(model, processor, inputs):
     hooks = []
     for i in range(NUM_LAYERS):
         if 'gemma' in str(type(model)).lower():
-            layer = model.language_model.layers[i].self_attn.o_proj
+            layer = model.model.layers[i].self_attn.o_proj # changed language_model to model
         else:
             layer = model.model.layers[i].self_attn.o_proj
         hook = layer.register_forward_hook(get_activation(f"mha_layer_{i}"))
