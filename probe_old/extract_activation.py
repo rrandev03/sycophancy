@@ -39,9 +39,7 @@ def extract_mha_activation(model, processor, inputs):
     hooks = []
     for i in range(NUM_LAYERS):
         if 'gemma' in str(type(model)).lower():
-            # Gemma3ForConditionalGeneration: model.model.language_model; Gemma3ForCausalLM: model.model
-            lm = model.model.language_model if hasattr(model.model, 'language_model') else model.model
-            layer = lm.layers[i].self_attn.o_proj
+            layer = model.model.language_model.layers[i].self_attn.o_proj # changed language_model to model
         else:
             layer = model.model.layers[i].self_attn.o_proj
         hook = layer.register_forward_hook(get_activation(f"mha_layer_{i}"))
@@ -109,8 +107,7 @@ def extract_mlp_activation(model, processor, inputs):
     hooks = []
     for i in range(NUM_LAYERS):
         if 'gemma' in str(type(model)).lower():
-            lm = model.model.language_model if hasattr(model.model, 'language_model') else model.model
-            layer = lm.layers[i].mlp.down_proj
+            layer = model.language_model.model.layers[i].mlp.down_proj
         else:
             layer = model.model.layers[i].mlp.down_proj
         hook = layer.register_forward_hook(get_activation(f"mlp_layer_{i}"))
@@ -175,8 +172,7 @@ def extract_residual_activation(model, processor, inputs):
     hooks = []
     for i in range(NUM_LAYERS):
         if 'gemma' in str(type(model)).lower():
-            lm = model.model.language_model if hasattr(model.model, 'language_model') else model.model
-            layer = lm.layers[i]
+            layer = model.language_model.model.layers[i]
         else:
             layer = model.model.layers[i]
         hook = layer.register_forward_hook(get_activation(f"residual_layer_{i}"))

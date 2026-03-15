@@ -1,5 +1,7 @@
-from transformers import AutoProcessor, AutoModelForCausalLM, AutoTokenizer, Gemma3ForConditionalGeneration, Mistral3ForConditionalGeneration, MistralCommonBackend
+from transformers import AutoProcessor, AutoModelForCausalLM, AutoTokenizer, Gemma3ForConditionalGeneration
 from datasets import load_dataset
+import os
+
 
 def load_test_data(dataset_id):
     if dataset_id == 'truthfulqa':
@@ -30,6 +32,15 @@ def load_test_data(dataset_id):
         raise('Dataset not supported')
     return questions_test, correct_answers_test
 
+
+def load_ep_data(split="train", ep_data_path=os.path.join(os.getcwd(), "epistemic-integrity", "scibert-finetuning", "data")):
+    if split == "train":
+        ds = load_dataset("csv", data_files=os.path.join(ep_data_path, "train_data.csv"))
+    else:
+        ds = load_dataset("csv", data_files=os.path.join(ep_data_path, "test_data.csv"))
+    # Single CSV yields DatasetDict with "train" split; return the Dataset for direct column access
+    return ds["train"]
+
 def load_model(model_id):
     if 'gemma-3' == model_id:
         model = Gemma3ForConditionalGeneration.from_pretrained("google/gemma-3-4b-it", device_map="cuda:0")
@@ -40,12 +51,6 @@ def load_model(model_id):
     elif 'llama-3.2' == model_id:
         model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.2-3B-Instruct", device_map='cuda:0')
         processor = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-3B-Instruct")
-    elif 'ministral-3' == model_id:
-        model = Mistral3ForConditionalGeneration("mistralai/Ministral-3-3B-Instruct-2512")
-        processor = MistralCommonBackend("mistralai/Ministral-3-3B-Instruct-2512")
-    elif 'smollm-3' == model_id:
-        model = AutoModelForCausalLM.from_pretrained("HuggingFaceTB/SmolLM3-3B", device_map='cuda:0')
-        processor = AutoTokenizer.from_pretrained("HuggingFaceTB/SmolLM3-3B")
     else:
         raise('Model ID Not supported, fail to load')
 

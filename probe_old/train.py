@@ -10,7 +10,6 @@ import importlib
 from tqdm.auto import tqdm
 
 import torch
-import wandb
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
@@ -43,7 +42,7 @@ class QADataset(Dataset):
 def train_probe(model, processor, train_dataset, val_dataset, batch_size,
                 learning_rate, num_epochs, device, target_component,
                 activation_type, input_dim, model_id, output_dir,
-                hidden_dim, head_dim, probe_type, use_wandb=False, step_offset=0):
+                hidden_dim, head_dim, probe_type): # Pass necessary dims
     """
     Trains a linear probe on top of LLM representations.
     """
@@ -112,9 +111,6 @@ def train_probe(model, processor, train_dataset, val_dataset, batch_size,
         avg_train_loss = total_loss / len(train_loader)
         print(f"Epoch [{epoch+1}/{num_epochs}], Training Loss: {avg_train_loss:.4f}")
 
-        if use_wandb:
-            wandb.log({"train_loss": avg_train_loss}, step=step_offset + epoch)
-
         # Validation
         probe.eval()
         correct = 0
@@ -142,9 +138,6 @@ def train_probe(model, processor, train_dataset, val_dataset, batch_size,
         print(f"Epoch [{epoch+1}/{num_epochs}], Validation Accuracy: {val_acc:.2f}%")
         best_val_acc = max(best_val_acc, val_acc) # Keep track of best acc
 
-        if use_wandb:
-            wandb.log({"val_acc": val_acc}, step=step_offset + epoch)
-
     # Save the trained linear probe
     save_dir = os.path.join(output_dir, model_id.split('/')[-1])
     os.makedirs(save_dir, exist_ok=True)
@@ -156,10 +149,6 @@ def train_probe(model, processor, train_dataset, val_dataset, batch_size,
          save_path = os.path.join(save_dir, f"{probe_type}_probe_residual_{target_component}.pth")
     torch.save(probe.state_dict(), save_path)
     print(f"Saved probe to {save_path}")
-
-    if use_wandb:
-        wandb.log({f"best_val_acc/{target_component}": best_val_acc})
-
     return best_val_acc # Return best validation accuracy over epochs
 
 # --- Main Function ---
@@ -262,33 +251,22 @@ def main(args):
     elif args.activation_type == 'residual':
         probe_input_dim = HIDDEN_DIM
 
-    if args.wandb:
-        wandb.init(
-            project="sycophancy-probes",
-            config=vars(args),
-            name=f"{args.model_id}_{args.activation_type}_{args.concept}",
-        )
-
     if args.activation_type == 'mha':
         for layer in range(NUM_LAYERS):
             for head in range(NUM_HEADS):
                 target_component = f"{layer}_{head}"
-                step_offset = (layer * NUM_HEADS + head) * args.epochs
                 current_acc = train_probe(model, processor, train_dataset, val_dataset,
                                           args.batch_size, args.lr, args.epochs, args.device,
                                           target_component, args.activation_type, probe_input_dim,
-                                          args.model_id, output_dir, HIDDEN_DIM, HEAD_DIM, args.probe_type,
-                                          use_wandb=args.wandb, step_offset=step_offset)
+                                          args.model_id, output_dir, HIDDEN_DIM, HEAD_DIM, args.probe_type)
                 accuracies[target_component] = current_acc
     elif args.activation_type == 'mlp' or args.activation_type == 'residual':
         for layer in range(NUM_LAYERS):
             target_component = f"{layer}"
-            step_offset = layer * args.epochs
             current_acc = train_probe(model, processor, train_dataset, val_dataset,
                                       args.batch_size, args.lr, args.epochs, args.device,
                                       target_component, args.activation_type, probe_input_dim,
-                                      args.model_id, output_dir, HIDDEN_DIM, HEAD_DIM, args.probe_type,
-                                      use_wandb=args.wandb, step_offset=step_offset)
+                                      args.model_id, output_dir, HIDDEN_DIM, HEAD_DIM, args.probe_type)
             accuracies[target_component] = current_acc
     else:
         raise ValueError("Invalid activation_type specified")
@@ -301,11 +279,6 @@ def main(args):
     print(f"Saving accuracies to {acc_path}")
     with open(acc_path, 'wb') as f:
         pickle.dump(accuracies, f)
-
-    if args.wandb:
-        wandb.log({"accuracies": wandb.Table(columns=["component", "val_acc"], data=[[k, v] for k, v in accuracies.items()])})
-        wandb.log({f"acc/{k}": v for k, v in accuracies.items()})
-        wandb.finish()
 
     print("Training complete.")
 
@@ -320,7 +293,6 @@ if __name__ == "__main__":
     parser.add_argument("--concept", type=str, default="sycophancy", choices=["sycophancy", "truthful", "sycophancy_hypothesis", "sycophancy_challenged"], help="Direction/concept to steer")
     parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu", help="Device to use ('cuda' or 'cpu').")
     parser.add_argument("--probe_type", type=str, default="linear", choices=["linear", "nonlinear"], help="Type of probe to use ('linear' or 'nonlinear').")
-    parser.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging.")
 
     args = parser.parse_args()
 
