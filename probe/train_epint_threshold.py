@@ -184,7 +184,7 @@ def main(args):
     # Load and Prepare Data
     print("Loading and preparing epistemic integrity (assertiveness) data...")
     ds_train = load_ep_data("train")
-    texts = ds_train["text"]
+    texts = list(ds_train["text"])
     assertiveness_score = np.array(ds_train["assertiveness"], dtype=np.float32)
     assertiveness = np.array(assertiveness_score > 5, dtype=np.float32)
     train_texts, val_texts, train_labels, val_labels = train_test_split(
