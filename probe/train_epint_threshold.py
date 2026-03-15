@@ -260,7 +260,7 @@ def main(args):
                 step_offset = (layer * NUM_HEADS + head) * args.epochs
                 current_acc = train_probe(model, processor, train_dataset, val_dataset,
                                           args.batch_size, args.lr, args.epochs, args.device,
-                                          target_component, args.activation_type, probe_input_dim,
+                                          target_component, "mha", probe_input_dim,
                                           args.model_id, output_dir, HIDDEN_DIM, HEAD_DIM, args.probe_type,
                                           use_wandb=args.wandb, step_offset=step_offset)
                 accuracies[target_component] = current_acc
