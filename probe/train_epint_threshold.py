@@ -186,7 +186,7 @@ def main(args):
     ds_train = load_ep_data("train")
     texts = ds_train["text"]
     assertiveness_score = np.array(ds_train["assertiveness"], dtype=np.float32)
-    assertiveness = np.array(ds_train['assertiveness'] > 5, dtype=np.float32)
+    assertiveness = np.array(assertiveness_score > 5, dtype=np.float32)
     train_texts, val_texts, train_labels, val_labels = train_test_split(
         texts, assertiveness, test_size=0.1, random_state=3407
     )
