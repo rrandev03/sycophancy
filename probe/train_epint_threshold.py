@@ -221,12 +221,12 @@ def main(args):
     train_activations = extract_activations_batch(
     model, processor, train_texts, args.model_id, max_length=2048, device=args.device
     )
-    train_activations_np = train_activations.float().numpy()
+    #train_activations_np = train_activations.float().numpy()
     
     val_activations = extract_activations_batch(
     model, processor, val_texts, args.model_id, max_length=2048, device=args.device
     )
-    val_activations_np = val_activations.float().numpy()
+    #val_activations_np = val_activations.float().tensor()
     
     # train_activation_list = []
     # for datum in tqdm(train_tok, total=len(train_tok), desc="Extracting Train Activations"):
@@ -239,8 +239,8 @@ def main(args):
     #     val_activation_list.append(act_tensor.cpu()) # Move back to CPU for storage
 
     # Create Datasets for Probe Training
-    train_dataset = QADataset(train_activations_np, train_labels)
-    val_dataset = QADataset(val_activations_np, val_labels)
+    train_dataset = QADataset(train_activations, train_labels)
+    val_dataset = QADataset(val_activations, val_labels)
 
     # Train Probes
     print("Starting probe training...")
